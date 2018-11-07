@@ -1,0 +1,259 @@
+<div id="user">
+	<!-- user页面 -->
+	<button class="btn btn-success btn-sm addBtn">新 增</button>
+	<!-- 模态框 -->
+	<div class="modal" id="userModal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header text-center">
+					<!-- 头 -->
+					<div class="backDiv">
+						<i class="iconfont icon-zuo"></i>
+						<span>返回</span>
+					</div>
+					<div class="modal-title">
+						添加用户
+					</div>
+				</div>
+				<div class="modal-body">
+					<!-- 体 -->
+					<form action="" class="form">
+						<div class="form-group">
+							<label for="username">用户名</label>
+							<input type="text" id="username" class="form-control" name="username"/>
+						</div>
+						<div class="form-group">
+							<label for="password1">密码</label>
+							<input type="password" id="password1" class="form-control" name="password1"/>
+						</div>
+						<div class="form-group">
+							<label for="password2">确认密码</label>
+							<input type="password" id="password2" class="form-control" name="password2"/>
+						</div>
+						<div class="form-group">
+							<label for="nickname">真实姓名</label>
+							<input type="text" id="nickname" class="form-control" name="nickname"/>
+						</div>
+						<div class="form-group">
+							<label for="email">email</label>
+							<input type="text" id="email" class="form-control" name="email"/>
+						</div>
+						<div class="form-group hide">
+							<button type="reset">重置</button>
+						</div>
+					</form>
+				</div>
+				<div class="modal-footer">
+					<span class="messageSpan">
+						<!-- 提示信息 -->
+					</span>
+					<button class="btn btn-success btn-sm saveBtn">确 认</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- 缩略图 -->
+	<div class="row marginTop">
+		<!-- <div class="col-sm-4">
+			<div class="thumbnail">
+				<img src="./images/u443.png" alt="" class="img-circle" style="width:130px;height:130px">
+				<div class="caption">
+					<div class="row">
+						<div class="col-sm-4 col-sm-offset-1">用户名</div>
+						<div class="col-sm-7">y</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 col-sm-offset-1">真实姓名</div>
+						<div class="col-sm-7">marry</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 col-sm-offset-1">注册时间</div>
+						<div class="col-sm-7">2018-03-23</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 col-sm-offset-1">email</div>
+						<div class="col-sm-7">718958836@qq.com</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 col-sm-offset-1">状态</div>
+						<div class="col-sm-7">
+							<input type="hidden" value="1001"/>
+							<div class="switch">
+								<input type="checkbox"/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div> -->
+	</div>
+	<!-- 警告框 -->
+	<div class="alertDiv">
+		<div class="alert alert-success">
+			<strong>提示：</strong>
+			<span>操作成功</span>
+		</div>
+	</div>
+</div>
+<script>
+	$(function(){
+		// 设置.modal-content的高度
+		$('.modal-content').height($(window).height());
+
+		// 复选框的初始化,设置值
+		// $('#user input[type=checkbox]').bootstrapSwitch('state',false);
+		$('#user').on({
+			'switchChange.bootstrapSwitch':function(event,state){
+				console.log(state);
+				// 点击修改后，向后台传递参数
+				var id = $(this).closest('.switch').prev('input').val();
+				var obj = {
+					id:id,
+					status:state
+				};
+				$.post(baseURL+'/manager/user/changeStatus',obj,function(res){
+					console.log('执行成功',res);
+				})
+			}
+		},'[type=checkbox]')
+
+		// 新增
+		$('.addBtn').click(function(){
+			// 清空表单数据
+			$('button[type=reset]').trigger('click');
+			// 清空提示信息
+			$('.messageSpan').html('');
+			// 显示模态框
+			$('#userModal').show();
+		});
+
+		// 返回
+		$('.backDiv').click(function(){
+			$('.modal').hide();
+		})
+
+		// 确认 数据验证或提交
+		$('.saveBtn').click(function(){
+			// 获取input内容
+			var username = $('input[name=username]').val();
+			var password1 = $('input[name=password1]').val();
+			var password2 = $('input[name=password2]').val();
+			var nickname = $('input[name=nickname]').val();
+			var email = $('input[name=email]').val();
+			// 验证
+			if(username&&password1&&password2&&nickname&&email){
+				if(password1==password2){
+					// 提交
+					var obj = {
+						username:username,
+						password:password1,
+						nickname:nickname,
+						email:email
+					}
+					$.post(baseURL+'/manager/user/saveOrUpdateUser',obj,function(res){
+						console.log('保存成功');
+						// 刷新页面
+						loadData();
+						// 关闭模态框
+						$('.modal').hide();
+						// 警告框
+							// 动画
+						$('.alertDiv').addClass('animated slideInRight');
+						$('.alertDiv').show();
+						setTimeout(function(){
+							$('.alertDiv').fadeOut(2000);
+						},3000);
+					})
+				}else{
+					message = "密码不一致"
+				}
+			}else{
+				message = "请输入完整信息"
+			}
+			$('.messageSpan').html(message);
+		});
+		// 获取数据
+		loadData();
+		function loadData(){
+			// 清空数据
+			$('.marginTop').empty();
+			// 获取
+			$.get(baseURL+'/manager/user/findAllUser',function(res){
+				console.log(res.data);
+				// 遍历数据 循环创建缩略图
+				res.data.forEach(function(item,index){
+					var $thumbnail = $(`<div class="col-sm-4">
+						<div class="thumbnail">
+							<img src="`+(item.userface?item.userface:'./images/u443.png')+`" alt="" class="img-circle" style="width:130px;height:130px">
+							<div class="caption">
+								<div class="row">
+									<div class="col-sm-4 col-sm-offset-1">用户名</div>
+									<div class="col-sm-7">`+(item.username?item.username:'-')+`</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-4 col-sm-offset-1">真实姓名</div>
+									<div class="col-sm-7">`+(item.nickname?item.nickname:'-')+`</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-4 col-sm-offset-1">注册时间</div>
+									<div class="col-sm-7">`+(item.regTime?item.regTime:'-')+`</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-4 col-sm-offset-1">email</div>
+									<div class="col-sm-7">`+(item.email?item.email:'-')+`</div>
+								</div>
+								<div class="row">
+									<div class="col-sm-4 col-sm-offset-1">状态</div>
+									<div class="col-sm-7">
+										<input type="hidden" value="`+item.id+`"/>
+										<div class="switch">
+											<input type="checkbox"/>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>`);
+					$('.marginTop').append($thumbnail);
+					$('#user input[type=checkbox]:last').bootstrapSwitch('state',item.enabled);
+				});
+			})
+		}
+	});
+</script>
+<style>
+	#user{
+		width: 98%;
+		margin: 0 auto;
+	}
+	.marginTop{
+		margin-top: 10px;
+	}
+	.thumbnail{
+		box-shadow: 3px 3px 3px #ccc;
+		font-size: 18px;
+		line-height: 40px;
+	}
+	.backDiv{
+		float: left;
+		cursor: pointer;
+	}
+	#userModal{
+		background-color: rgba(0,0,0,0.4);
+	}
+	.modal-dialog{
+		margin-top: 0;
+		margin-right: 0;
+		width: 300px;
+	}
+	.messageSpan{
+		color:red;
+	}
+	.alertDiv{
+		display: none;
+		width: 200px;
+		position: absolute;
+		top: 50px;
+		right: 10px;
+	}
+</style>

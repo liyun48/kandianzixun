@@ -1,0 +1,278 @@
+<div id="category">
+	<!-- 栏目管理页面 -->
+	<div class="outerDiv bg-white">
+		<!-- 按钮 -->
+		<button class="btn btn-success btn-sm addBtn">新 增</button>
+		<button class="btn btn-success btn-sm removeBtn">批量删除</button>
+		<!-- 表格 -->
+		<table class="table table-bordered text-center marginTop">
+			<tr>
+				<th class="text-center" style="width:100px">编号</th>
+				<th class="text-center">栏目名称</th>
+				<th class="text-center">父栏目</th>
+				<th class="text-center">描述</th>
+				<th class="text-center">操作</th>
+			</tr>
+			<!-- <tr class="tableContent">
+				<td>
+					<input type="checkbox"/>
+				</td>
+				<td></td>
+				<td></td>
+				<td></td>
+				<td></td>
+			</tr> -->
+		</table>
+		<!-- 模态框 -->
+		<div class="modal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header text-center">
+						<div class="backDiv">
+							<i class="iconfont icon-zuo"></i>
+							<span>返回</span>
+						</div>
+						<div class="modal-title">添加栏目</div>
+					</div>
+					<div class="modal-body">
+						<form action="" class="form">
+							<div class="form-group">
+								<label for="name">栏目名称</label>
+								<input type="text" id="name" name="name" class="form-control"/>
+							</div>
+							<div class="form-group">
+								<label for="parent">父栏目</label>
+								<select id="parent" name="parent" class="form-control">
+									<option value="">请选择</option>
+									<!-- <option value="">
+										需要获取所有的父栏目，追加节点
+									</option> -->
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="comment">描述</label>
+								<textarea name="comment" id="comment" cols="30" rows="5" class="form-control"></textarea>
+							</div>
+							<div class="form-group hide">
+								<button type="reset">重置</button>
+							</div>
+						</form>
+					</div>
+					<div class="modal-footer">
+						<span class="messageSpan"></span>
+						<button class="btn btn-success btn-sm saveBtn">提 交</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- 警告框 -->
+		<div class="alertDiv">
+			<div class="alert alert-success">
+				<strong>提示：</strong>
+				<span>提交成功</span>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	$(function(){
+		// 声明全局变量
+		var categories = [];
+		var currentId ='';
+		var option = '';
+		// 模态框高度
+		$('.modal-content').height($(window).height());
+		
+		// 返回
+		$('.backDiv').click(function(){
+			$('.modal').hide();
+		});
+
+		// 新增
+		$('.addBtn').click(function(){
+			option='新增';
+			// 清空模态框
+			$('button[type=reset]').trigger('click');
+			// 清空提示信息
+			$('.messageSpan').html('');
+			// 获取所有的父栏目，追加到option中
+			addOption();
+			// $('select option:not(:first)').remove();
+			// $.get(baseURL+'/manager/category/findAllCategory',function(res){
+			// 	console.log(res.data);
+			// 	res.data.forEach(function(item){
+			// 		var $option = $('<option value="'+item.id+'">'+item.name+'</option>');
+			// 		$('select').append($option);
+			// 	})
+			// })
+			// 显示模态框
+			$('.modal').show();
+		});
+		
+		// 提交
+		$('.saveBtn').click(function(){
+			var name = $('input[name=name]').val();
+			var parent = $('select[name=parent]').val();
+			var comment = $('textarea[name=comment]').val();
+			// console.log('name:',name,'parent:',parent,'comment:',comment);
+			if(name&&comment){
+				var obj = {
+					name:name,
+					comment:comment,
+					no:null,
+					parentId:parent
+				}
+				// 判断是修改还是新增 若是修改，多添加一个id属性
+				if(option=="修改"){
+					obj.id = currentId;
+				}
+				$.post(baseURL+'/manager/category/saveOrUpdateCategory',obj,function(){
+					$('.alertDiv').show();
+					$('.alertDiv').fadeOut(3000);
+					loadData();
+					$('.modal').hide();
+				})
+			}else{
+				$('.messageSpan').html('请输入完整的信息');
+			}
+		});
+
+		// 修改  事件代理
+		$('table').on({
+			click:function(){
+				option='修改';
+				var id = $(this).closest('tr').find('[type=checkbox]').val();
+				currentId = id;
+				// alert(currentId);
+				var cat = categories.filter(function(item){
+					return item.id == currentId;
+				})[0];
+				console.log(cat);
+				$('input[name=name]').val(cat.name);
+				addOption(function(){
+					$('select[name=parent]').val(cat.parent?cat.parent.id:'');
+				})
+				// addOption();
+				// $('select[name=parent]').val(cat.parent?cat.parent.id:'');
+				$('textarea[name=comment]').val(cat.comment);
+				$('.modal').show();
+			}
+		},'i[title=修改]')
+		// 删除
+		$('table').on({
+			click:function(){
+				var id = $(this).closest('tr').find('[type=checkbox]').val();
+				var obj = {
+					id:id
+				}
+				$.get(baseURL+'/manager/category/deleteCategoryById',obj,function(res){
+					console.log(res);
+					if(res.status==200){
+						loadData();
+						alert('删除成功')
+					}else{
+						alert('删除失败')
+					}
+				})
+			}
+		},'i[title=删除]')
+
+		// 批量删除
+		$('.removeBtn').click(function(){
+			// 获取用户选中的checkbox，映射拿到id值，转换为数组
+			var ids = $('input[type=checkbox]:checked').map(function(index,item){
+				return $(item).val();
+			}).get();
+			console.log(ids);
+			var obj = {
+				ids:ids.toString()
+			}
+			$.post(baseURL+'/manager/category/batchDeleteCategory',obj,function(res){
+				console.log(res,'批量删除');
+				if(res.status==200){
+					loadData();
+					alert('批量删除成功');
+				}else{
+					alert('批量删除失败');
+				}
+			})
+		})
+		
+		loadData();
+		// 获取数据
+		function loadData(){
+			// 清空数据
+			$('.tableContent').remove();
+			$.get(baseURL+'/manager/category/findAllCategory',function(res){
+				categories = res.data;
+				res.data.forEach(function(item,index){
+					var $tableContent = $(`<tr class="tableContent">
+						<td>
+							<input type="checkbox" value="`+item.id+`"/>
+						</td>
+						<td>`+item.name+`</td>
+						<td>`+(item.parent?item.parent.name:'')+`</td>
+						<td>`+item.comment+`</td>
+						<td>
+							<i class="iconfont icon-edit-1-copy" title="修改"></i>
+							<i class="iconfont icon-shanchu" title="删除"></i>
+						</td>
+					</tr>`);
+					$('.table').append($tableContent);
+				})
+			})
+		}
+		// 获取option
+		function addOption(handle){
+			$('select option:not(:first)').remove();
+			$.get(baseURL+'/manager/category/findAllCategory',function(res){
+				// console.log(res.data);
+				res.data.forEach(function(item){
+					var $option = $('<option value="'+item.id+'">'+item.name+'</option>');
+					$('select').append($option);
+				});
+				if(handle){
+					handle();
+				};
+
+			});
+		};
+	});
+</script>
+<style>
+	.bg-white{
+		background-color: #fff;
+	}
+	.marginTop{
+		margin-top: 10px;
+	}
+	.outerDiv{
+		padding: 10px;
+		border-radius: 5px;
+	}
+	.modal{
+		background-color: rgba(0,0,0,0.3);
+	}
+	.modal-dialog{
+		width: 300px;
+		margin-top: 0;
+		margin-right: 0;
+	}
+	.backDiv{
+		float: left;
+		cursor: pointer;
+	}
+	.table i:nth-child(1){
+		color: #63b919;
+	}
+	.table i:nth-child(2){
+		color: red;
+	}
+	.alertDiv{
+		width: 200px;
+		position: absolute;
+		top: 50px;
+		right: 10px;
+		display: none;
+	}
+</style>
